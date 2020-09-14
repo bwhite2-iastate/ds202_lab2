@@ -7,71 +7,114 @@ output: html_document
 
 We will be exploring what aspects of the chocolates may affect taste. Before setting off to the exploration, answer the following questions.**
 
-```{r}
-choco <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/data/choco.csv") 
-str(choco)
+```{r load, include = FALSE}
+choco <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/data/choco.csv")
+characteristics <- c(as.character(choco$Characteristics1), as.character(choco$Characteristics2), as.character(choco$Characteristics3), as.character(choco$Characteristics4))
+characteristics <- tolower(unique(characteristics[!is.na(characteristics) & characteristics != '']))
+for(i in characteristics) {
+  choco[, i] <- !is.na(choco$Characteristics1) & tolower(choco$Characteristics1) == i | !is.na(choco$Characteristics2) & tolower(choco$Characteristics2) == i | !is.na(choco$Characteristics3) & tolower(choco$Characteristics3) == i | !is.na(choco$Characteristics4) & tolower(choco$Characteristics4) == i
+  choco[, paste(i, 'like', sep='_')] <- !is.na(choco$Characteristics1) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics1)) | !is.na(choco$Characteristics2) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics2)) | !is.na(choco$Characteristics3) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics3)) | !is.na(choco$Characteristics4) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics4))
+}
 ```
 
 1. How are the ratings distributed? Create both a histogram and a boxplot and describe them. Don’t forget to mention outliers, if there are any.
+    ```{r, dependson = "load", echo = FALSE}
+    hist(choco$Rating, main='Distribution of Ratings', xlab='Rating')
+    boxplot(choco$Rating, main='Distribution of Ratings')
+    ```
 
-```{r}
-hist(choco$Rating)
-boxplot(choco$Rating)
-```
-The histogram for Ratings is bimodal with multiple outliers. Most ratings seem to be centered around the number 3. The outliers are just a few low rated chocolates. 
+    The histogram for Ratings is bimodal with multiple outliers. The median rating is `r median(choco$Rating, na.rm=TRUE)`. Half of the ratings are between 3.0 and 3.5. The outliers are the poorly-rated chocolates (1.0-2.0).
 
 2. How does the number of ratings depend on the year? Draw a bar chart of the number of reports.
-```{r}
-counts <- table(choco$Date)
-barplot(counts, main = "Do the number of ratings depend on year?")
-```
-It would appear that the best rated chocolates were made in between 2012 and 2016.
+    ```{r, dependson = "load", echo = FALSE}
+    barplot(table(choco$Date), main='Number of Ratings by Year', xlab='Year', ylab='Count')
+    ```
+
+    The number of ratings increased each year from 2006 (when the earliest ratings were given) until 2015 with two exceptions (2010 and 2013). After 2015, the number of ratings decreased significantly in 2016 and even more in 2017 before increasing again to the number of ratings in 2016 in 2018. The number of ratings decreased a small amount in 2019, and there was a significant drop in 2020, though the ratings were last updated in March 2020 and so there may actually be more ratings now.
 
 3. Do ratings depend on the cacao percentage of a chocolate bar? Create both numerical and graphical summaries, and explain.
-```{r}
-cor(x = choco$Rating, y = choco$Cocoa_Percent) #numerical summary
-plot(choco$Rating, choco$Cocoa_Percent) # graphical summary
-```
-The ratings don't seem to depend on cocoa percentage. You can see many examples of this in the scatterplot that shows a wide range of values spread out between 50 and 90 percent of cocoa. The correlation coefficent is also very close to zero meaning that there is very high variability and barely any linear relationship between both variables.
+    ```{r, dependson = "load", echo = FALSE}
+    plot(choco$Rating, choco$Cocoa_Percent, main='Scatter Plot of Cocoa Percentage and Rating', xlab='Rating', ylab='Cocoa Percent')
+    ```
+
+    The ratings don't seem to depend on cocoa percentage. There are chocolates with ratings of 4.0 which vary in cocoa percentage from `r min(choco[choco$Rating == 4, 'Cocoa_Percent'], na.rm=TRUE)`% to `r max(choco[choco$Rating == 4, 'Cocoa_Percent'], na.rm=TRUE)`%. There are also ratings of 2.0 which vary in cocoa percentage from `r min(choco[choco$Rating == 2, 'Cocoa_Percent'], na.rm=TRUE)`% to `r max(choco[choco$Rating == 2, 'Cocoa_Percent'], na.rm=TRUE)`%. The cocoa percentage does not clearly increase or decrease as the rating increases. There is a lot of variability in cocoa percentage for each rating. The correlation coefficent is `r cor(x=choco$Rating, y=choco$Cocoa_Percent)` which is very close to zero meaning that there is a very weak linear relationship between both variables.
 
 4. How do different characteristics of the chocolate compare? To elaborate, which characteristics tend to be more favorable and which ones are not? Create both numerical and graphical summaries, and explain.
-```{r}
-chars <- unique(c(as.character(choco$Characteristics1), as.character(choco$Characteristics2), as.character(choco$Characteristics3), as.character(choco$Characteristics4))) 
-chars <- chars[!is.na(chars) & chars != ""]
-chars
-
-charFunction <- function(targetChar){
-  choco[,targetChar] <- !is.na(choco$Characteristics1) & choco$Characteristics1 == targetChar | !is.na(choco$Characteristics2) & choco$Characteristics2 == targetChar | !is.na(choco$Characteristics3) & choco$Characteristics3 == targetChar | !is.na(choco$Characteristics4) & choco$Characteristics4 == targetChar 
-  summary(choco[choco[,targetChar], "Rating"])
-  barplot(table(choco[choco[,targetChar], targetChar], choco[choco[,targetChar], "Rating"]),  main = targetChar)
+```{r analyzechars, dependson = "load", include = FALSE}
+analyzeCharacteristic <- function(targetCharacteristic) {
+  rows <- choco[choco[, targetCharacteristic], ]
+  barplot(table(rows[, targetCharacteristic], rows[, 'Rating']),  main = targetCharacteristic)
+  print(summary(rows[, 'Rating']))
 }
-charFunction("banana")
-#The flavor banana seems to be generally favorable with 14 bars having a 3.5 rating.
-charFunction("cherry")
-#Cherry also seems to be generally favorable as it has 29 flavors in between 3 and 4 ratings.
-charFunction("toast")
-#Toast has two bars, one in 3 and another in 3.5.
-charFunction("chocolatey")
-#Chocolatey is also generally favorable because it has all its flavors in between 3 and 3.75
-charFunction("dirty")
-#Dirty is a strange one as it has many flavors spread out from 2.5 to 3.5. Who thought dirt flavored chocolate would be good?
-charFunction("intense vinegar")
-#Intense vinegar has a rating of 2.5 which is strange considering that its a chocolate bar. 
-
 ```
+    ```{r, dependson = c("load", "analyzechars"), echo = FALSE}
+    analyzeCharacteristic("banana")
+    ```
+
+    The banana characteristic seems to be generally favorable with `r nrow(choco[choco[, 'banana'], ])` chocolates having a mean rating of `r round(mean(choco[choco[, 'banana'], 'Rating'], na.rm=TRUE), digits=2)`. `r nrow(choco[choco[, 'banana'] & choco$Rating == 3.5, ])` of those chocolates have a rating of 3.5.
+
+    ```{r, dependson = c("load", "analyzechars"), echo = FALSE}
+    analyzeCharacteristic("cherry")
+    ```
+
+    The cherry characteristic seems to be generally favorable with `r nrow(choco[choco[, 'cherry'], ])` chocolates having a mean rating of `r round(mean(choco[choco[, 'cherry'], 'Rating'], na.rm=TRUE), digits=2)`. All `r nrow(choco[choco[, 'cherry'] & choco$Rating >= 3, ])` of those chocolates have a rating of at least 3.
+
+    ```{r, dependson = c("load", "analyzechars"), echo = FALSE}
+    analyzeCharacteristic("toast")
+    ```
+
+    The toast characteristic seems to be generally favorable with `r nrow(choco[choco[, 'toast'], ])` chocolates having a mean rating of `r round(mean(choco[choco[, 'toast'], 'Rating'], na.rm=TRUE), digits=2)`.
+
+    ```{r, dependson = c("load", "analyzechars"), echo = FALSE}
+    analyzeCharacteristic("chocolatey")
+    ```
+
+    The chocolately characteristic seems to be generally favorable with `r nrow(choco[choco[, 'chocolatey'], ])` chocolates having a mean rating of `r round(mean(choco[choco[, 'chocolatey'], 'Rating'], na.rm=TRUE), digits=2)` with all ratings between `r min(choco[choco[, 'chocolatey'], 'Rating'], na.rm=TRUE)` and `r max(choco[choco[, 'chocolatey'], 'Rating'], na.rm=TRUE)`, inclusive.
+
+    ```{r, dependson = c("load", "analyzechars"), echo = FALSE}
+    analyzeCharacteristic("dirty")
+    ```
+
+    The dirty characteristic has ratings ranging from `r min(choco[choco[, 'dirty'], 'Rating'], na.rm=TRUE)` to `r max(choco[choco[, 'dirty'], 'Rating'], na.rm=TRUE)` with a mean rating of `r round(mean(choco[choco[, 'dirty'], 'Rating'], na.rm=TRUE), digits=2)`. The `r max(choco[choco[, 'dirty'], 'Rating'], na.rm=TRUE)` rating is surprising. Who would give dirty chocolate such a high rating?
+
+    ```{r, dependson = c("load", "analyzechars"), echo = FALSE}
+    analyzeCharacteristic("intense vinegar")
+    ```
+
+    The intense vinegar characteristic has `r nrow(choco[choco[, 'intense vinegar'], ])` rating of `r mean(choco[choco[, 'intense vinegar'], 'Rating'], na.rm=TRUE)` which is surprising because this is chocolate and one would think that chocolate with a characteristic of intense vinegar would be inedible.
+
 5. Brainstorm two analyses you would like to perform with your teammate. Describe in plain language what comparisons are you making. Create suitable numerical and graphical summaries for your analyses. Describe the results.
-```{r}
-generate <- function(BO){
-  barplot(table(choco[!is.na(choco$Rating) & choco$Bean_Origin == BO, "Bean_Origin"], choco[!is.na(choco$Rating) & choco$Bean_Origin == BO, "Rating"] ), main = BO)
-  print(summary(choco[!is.na(choco$Rating) & choco$Bean_Origin == BO, "Rating"]))
-  
+```{r analyzeorigins, dependson = "load", include = FALSE}
+analyzeBeanOrigin <- function(origin) {
+  rows <- choco[choco$Bean_Origin == origin, ]
+  barplot(table(rows[, "Bean_Origin"], rows[, "Rating"] ), main = origin)
+  print(summary(rows[, "Rating"]))
 }
-
-generate("Colombia")
-generate("U.S.A.")
-generate("Ghana")
-generate("Peru")
-generate("Vietnam")
 ```
-We compared different bean origins based on rating. We found that South America has the most countries that export chocolate. Of these, Peru and Colombia seem to be ones with the most exports. Peru has many chocolates with a 3 rating or more, 40 of those being 3.5. Vietnam also has many chocolates that fall within that 3 range. The US also has many chocolates in between 3 and 3.75 range. We can see that generally the more chocolates a country produces, the higher the rating they have in general.
+    ```{r, dependson = c("load", "analyzeorigins"), echo = FALSE}
+    analyzeBeanOrigin("Colombia")
+    analyzeBeanOrigin("U.S.A.")
+    analyzeBeanOrigin("Ghana")
+    analyzeBeanOrigin("Peru")
+    analyzeBeanOrigin("Vietnam")
+    ```
 
+    We compared different bean origins based on rating. We found that South America has the most countries that export chocolate. Of these, Peru and Colombia seem to be ones with the most exports. Peru has many chocolates with a 3 rating or more, 40 of those being 3.5. Vietnam also has many chocolates that fall within that 3 range. The US also has many chocolates in between 3 and 3.75 range. We can see that generally the more chocolates a country produces, the higher the rating they have in general.
+    
+```{r analyzecompanies, dependson = "load", include = FALSE}
+analyzeCompany <- function(company) {
+  rows <- choco[choco$Company == company, ]
+  barplot(table(rows[, 'Company'], rows[, 'Rating']), main=company)
+  print(summary(rows[, 'Rating']))
+}
+```
+    ```{r, dependson = c("load", "analyzecompanies"), echo = FALSE}
+    analyzeCompany('Chocola\'te')
+    analyzeCompany('Obolo')
+    analyzeCompany('Ocelot')
+    analyzeCompany('Bean')
+    analyzeCompany('Casa')
+    analyzeCompany('Shark\'s')
+    ```
+
+    We also compared chocolates from different companies based on mean rating. Chocola'te, Obolo, and Ocelot all had generally favorable chocolates with mean ratings of at least 3.75. Bean, Casa, and Shark's all had generally unfavorable chocolates with mean ratings less than or equal to 2.5.
