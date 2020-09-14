@@ -1,0 +1,198 @@
+---
+title: "Lab 2"
+author: "Brett White"
+output: html_document
+---
+
+```{r load, include = FALSE}
+choco <- read.csv('https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/data/choco.csv')
+characteristics <- c(as.character(choco$Characteristics1), as.character(choco$Characteristics2), as.character(choco$Characteristics3), as.character(choco$Characteristics4))
+characteristics <- tolower(unique(characteristics[!is.na(characteristics) & characteristics != '']))
+for(i in characteristics) {
+  choco[, i] <- !is.na(choco$Characteristics1) & tolower(choco$Characteristics1) == i | !is.na(choco$Characteristics2) & tolower(choco$Characteristics2) == i | !is.na(choco$Characteristics3) & tolower(choco$Characteristics3) == i | !is.na(choco$Characteristics4) & tolower(choco$Characteristics4) == i
+  choco[, paste(i, 'like', sep='_')] <- !is.na(choco$Characteristics1) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics1)) | !is.na(choco$Characteristics2) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics2)) | !is.na(choco$Characteristics3) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics3)) | !is.na(choco$Characteristics4) & grepl(gsub('\\)', '\\\\)', gsub('\\(', '\\\\(', i)), tolower(choco$Characteristics4))
+}
+```
+
+1.
+    ```{r, dependson = "load", echo = FALSE}
+    hist(choco$Rating, main='Distribution of Ratings', xlab='Rating')
+    boxplot(choco$Rating, main='Distribution of Ratings')
+    ```
+
+    The ratings are bimodal. The median is `r median(choco$Rating, na.rm=TRUE)`. Half of the ratings are between 3.0 and 3.5. The lower ratings (1.0-2.0) appear to be outliers.
+
+1.
+    ```{r, dependson = "load", echo = FALSE}
+    barplot(table(choco$Date), main='Number of Ratings by Year', xlab='Year', ylab='Count')
+    ```
+
+    The number of ratings increased each year from 2006 (when the earliest ratings were given) until 2015 with two exceptions (2010 and 2013). After 2015, the number of ratings decreased significantly in 2016 and even more in 2017 before increasing again to the number of ratings in 2016 in 2018. The number of ratings decreased a small amount in 2019, and there was a significant drop in 2020, though the ratings were last updated in March 2020 and so there may actually be more ratings now.
+
+1.
+    ```{r, dependson = "load"}
+    plot(choco$Rating, choco$Cocoa_Percent, main='Scatter Plot of Cocoa Percentage and Rating', xlab='Rating', ylab='Cocoa Percent')
+    ```
+
+    Based on the scatter plot above, the ratings do not seem to depend on the cocoa percentage. There are chocolates with ratings of 4.0 which vary in cocoa percentage from `r min(choco[choco$Rating == 4, 'Cocoa_Percent'], na.rm=TRUE)`% to `r max(choco[choco$Rating == 4, 'Cocoa_Percent'], na.rm=TRUE)`%. There are also ratings of 2.0 which vary in cocoa percentage from `r min(choco[choco$Rating == 2, 'Cocoa_Percent'], na.rm=TRUE)`% to `r max(choco[choco$Rating == 2, 'Cocoa_Percent'], na.rm=TRUE)`%. The cocoa percentage does not clearly increase or decrease as the rating increases. There is a lot of variability in cocoa percentage for each rating. The correlation between the two variables is `r cor(x=choco$Rating, y=choco$Cocoa_Percent)` which indicates a very weak correlation between rating and cocoa percentage.
+
+1.
+    ```{r def, include = FALSE}
+    generateListString <- function(list) {
+      str <- ''
+      lastitem <- list[length(list)]
+      len <- length(list)
+      for(i in list) {
+        if(str == '') str <- i
+        else if(i == lastitem) {
+          if(len == 2) str <- paste(str, i, sep=' and ')
+          else str <- paste(str, i, sep=', and ')
+        } else str <- paste(str, i, sep=', ')
+      }
+      return(str)
+    }
+    ```
+    ```{r, dependson = "load", eval = FALSE}
+    for(i in names(choco)) {
+      if(i == 'Rating') next
+      if(i != 'Date' && is.numeric(choco[, i])) plot(choco[, i], choco$Rating, xlab=i)
+      else if(!is.logical(choco[, i])) {
+        barplot(table(choco$Rating, choco[, i]), las=2, col=colorRampPalette(colors=c('brown','orange'))(length(unique(choco$Rating))))
+        for(j in unique(choco[, i])) {
+          ratings <- choco[choco[, i] == j & !is.na(choco$Rating), 'Rating']
+          print(j)
+          print(summary(ratings))
+        }
+      }
+    }
+    ```
+    ```{r, dependson = "load", echo = FALSE}
+    for(i in characteristics) {
+      if(nrow(choco[choco[, i], ]) < 3) {
+        print(i)
+        print(mean(choco[choco[, i], 'Rating'], na.rm=TRUE))
+      } else {
+        barplot(table(choco[choco[, i], i], choco[choco[, i], 'Rating']), main=i)
+        print(summary(choco[choco[, i], 'Rating']))
+      }
+      col <- paste(i, 'like', sep='_')
+      if(nrow(choco[choco[, i], ]) == nrow(choco[choco[, col], ])) next
+      if(nrow(choco[choco[, col], ]) < 3) {
+        print(col)
+        print(mean(choco[choco[, col], 'Rating'], na.rm=TRUE))
+      } else {
+        barplot(table(choco[choco[, col], col], choco[choco[, col], 'Rating']), main=col)
+        print(summary(choco[choco[, col], 'Rating']))
+      }
+    }
+    ```
+    ```{r, dependson = "load", eval = FALSE}
+    print('Good characteristics')
+    for(i in characteristics) {
+      rows <- choco[choco[, i], ]
+      ratings <- rows[, 'Rating']
+      cmean <- mean(ratings, na.rm=TRUE)
+      if(cmean > 3.25) {
+        nrows <- nrow(rows)
+        print(i)
+        print(paste('Count:', nrows, sep=' '))
+        print(paste('Mean rating:', cmean, sep=' '))
+        if(nrows > 3) barplot(table(rows[, i], ratings), main=i)
+      }
+      col <- paste(i, 'like', sep='_')
+      lrows <- choco[choco[, col], ]
+      if(nrow(rows) == nrow(lrows)) next
+      ratings <- lrows[, 'Rating']
+      cmean <- mean(ratings, na.rm=TRUE)
+      if(cmean > 3.25) {
+        nrows <- nrow(lrows)
+        print(col)
+        print(paste('Count:', nrows, sep=' '))
+        print(paste('Mean rating:', cmean, sep=' '))
+        if(nrows > 3) barplot(table(lrows[, col], ratings), main=col)
+      }
+    }
+    print('Bad characteristics')
+    for(i in characteristics) {
+      rows <- choco[choco[, i], ]
+      ratings <- rows[, 'Rating']
+      cmean <- mean(ratings, na.rm=TRUE)
+      if(cmean < 3) {
+        nrows <- nrow(rows)
+        print(i)
+        print(paste('Count:', nrows, sep=' '))
+        print(paste('Mean rating:', cmean, sep=' '))
+        if(nrows > 3) barplot(table(rows[, i], ratings), main=i)
+      }
+      col <- paste(i, 'like', sep='_')
+      lrows <- choco[choco[, col], ]
+      if(nrow(rows) == nrow(lrows)) next
+      ratings <- lrows[, 'Rating']
+      cmean <- mean(ratings, na.rm=TRUE)
+      if(cmean < 3) {
+        nrows <- nrow(lrows)
+        print(col)
+        print(paste('Count:', nrows, sep=' '))
+        print(paste('Mean rating:', cmean, sep=' '))
+        if(nrows > 3) barplot(table(lrows[, col], ratings), main=col)
+      }
+    }
+    ```
+    ```{r, dependson = c("load", "def"), include = FALSE}
+    good <- c()
+    bad <- c()
+    for(i in characteristics) {
+      cmean <- mean(choco[choco[, i], 'Rating'], na.rm=TRUE)
+      if(cmean >= 3.9) good <- c(good, i)
+      else if(cmean <= 2) bad <- c(bad, i)
+      col <- paste(i, 'like', sep='_')
+      cmean <- mean(choco[choco[, col], 'Rating'], na.rm=TRUE)
+      if(cmean >= 3.9) good <- c(good, col)
+      else if(cmean <= 2) bad <- c(bad, col)
+    }
+    goodstr <- generateListString(good)
+    badstr <- generateListString(bad)
+    ```
+
+    Based on the mean ratings, it can be seen that characteristics such as `r goodstr` are highly rated (greater than or equal to 3.9) while characteristics such as `r badstr` are poorly rated (less than or equal to 2.0).
+1.
+    ```{r, dependson = "load", echo = FALSE}
+    for(i in unique(choco$Bean_Origin)) {
+      rows <- choco[choco$Bean_Origin == i, ]
+      barplot(table(rows[, 'Bean_Origin'], rows[, 'Rating']), main=i)
+      print(summary(rows[, 'Rating']))
+    }
+    ```
+    ```{r, dependson = c("load", "def"), include = FALSE}
+    good <- c()
+    bad <- c()
+    for(i in unique(choco$Bean_Origin)) {
+      cmean <- mean(choco[choco$Bean_Origin == i, 'Rating'], na.rm=TRUE)
+      if(cmean >= 3.5) good <- c(good, i)
+      else if(cmean <= 2.75) bad <- c(bad, i)
+    }
+    goodstr <- generateListString(good)
+    badstr <- generateListString(bad)
+    ```
+
+    Based on the mean ratings for each bean origin, it can be seen that bean origins such as `r goodstr` produce highly-rated (greater than or equal to 3.5) chocolate. It can also be seen that `r badstr` produce poorly-rated (less than or equal to 2.75) chocolate.
+    ```{r, dependson = "load", echo = FALSE}
+    for(i in unique(choco$Company)) {
+      rows <- choco[choco$Company == i, ]
+      barplot(table(rows[, 'Company'], rows[, 'Rating']), main=i)
+      print(summary(rows[, 'Rating']))
+    }
+    ```
+    ```{r, dependson = c("load", "def"), include = FALSE}
+    good <- c()
+    bad <- c()
+    for(i in unique(choco$Company)) {
+      cmean <- mean(choco[choco$Company == i, 'Rating'], na.rm=TRUE)
+      if(cmean >= 3.75) good <- c(good, i)
+      else if(cmean <= 2.5) bad <- c(bad, i)
+    }
+    goodstr <- generateListString(good)
+    badstr <- generateListString(bad)
+    ```
+
+    Based on the mean ratings for each company, it can be seen that companies such as `r goodstr` produce highly-rated (greater than or equal to 3.75) chocolate. It can also be seen that `r badstr` produce poorly-rated (less than or equal to 2.5) chocolate.
