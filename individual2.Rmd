@@ -78,4 +78,4 @@ generate("Ghana")
 generate("Peru")
 generate("Vietnam")
 ```
-We compared different bean origins based on rating. 
+We compared different bean origins based on rating. We found that South America has the most countries that export chocolate. Of these, Peru and Colombia seem to be ones with the most exports. Peru has many chocolates with a 3 rating or more, 40 of those being 3.5. Vietnam also has many chocolates that fall within that 3 range. The US also has many chocolates in between 3 and 3.75 range. We can see that generally the more chocolates a country produces, the higher the rating they have in general.
