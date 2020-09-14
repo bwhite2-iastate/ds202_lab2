@@ -1,0 +1,81 @@
+---
+title: "Lab2"
+author: "Felix Baez-Santiago"
+date: "9/8/2020"
+output: html_document
+---
+**Searching for the Best Chocolates
+We will be exploring what aspects of the chocolates may affect taste. Before setting off to the exploration, answer the following questions.**
+
+```{r}
+choco <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/data/choco.csv") 
+str(choco)
+```
+
+1. How are the ratings distributed? Create both a histogram and a boxplot and describe them. Don’t forget to mention outliers, if there are any.
+
+```{r}
+hist(choco$Rating)
+boxplot(choco$Rating)
+```
+The histogram for Ratings is bimodal with multiple outliers. Most ratings seem to be centered around the number 3. The outliers are just a few low rated chocolates. 
+
+2. How does the number of ratings depend on the year? Draw a bar chart of the number of reports.
+```{r}
+counts <- table(choco$Date)
+barplot(counts, main = "Do the number of ratings depend on year?")
+```
+It would appear that the best rated chocolates were made in between 2012 and 2016.
+
+3. Do ratings depend on the cacao percentage of a chocolate bar? Create both numerical and graphical summaries, and explain.
+```{r}
+cor(x = choco$Rating, y = choco$Cocoa_Percent) #numerical summary
+plot(choco$Rating, choco$Cocoa_Percent) # graphical summary
+```
+The ratings don't seem to depend on cocoa percentage. You can see many examples of this in the scatterplot that shows a wide range of values spread out between 50 and 90 percent of cocoa. The correlation coefficent is also very close to zero meaning that there is very high variability and barely any linear relationship between both variables.
+
+4. How do different characteristics of the chocolate compare? To elaborate, which characteristics tend to be more favorable and which ones are not? Create both numerical and graphical summaries, and explain.
+```{r}
+chars <- unique(c(as.character(choco$Characteristics1), as.character(choco$Characteristics2), as.character(choco$Characteristics3), as.character(choco$Characteristics4))) 
+chars <- chars[!is.na(chars) & chars != ""]
+chars
+
+charFunction <- function(targetChar){
+  choco[,targetChar] <- !is.na(choco$Characteristics1) & choco$Characteristics1 == targetChar | !is.na(choco$Characteristics2) & choco$Characteristics2 == targetChar | !is.na(choco$Characteristics3) & choco$Characteristics3 == targetChar | !is.na(choco$Characteristics4) & choco$Characteristics4 == targetChar 
+  summary(choco[choco[,targetChar], "Rating"])
+  barplot(table(choco[choco[,targetChar], targetChar], choco[choco[,targetChar], "Rating"]),  main = targetChar)
+}
+charFunction("banana")
+#The flavor banana seems to be generally favorable with 14 bars having a 3.5 rating.
+charFunction("cherry")
+#Cherry also seems to be generally favorable as it has 29 flavors in between 3 and 4 ratings.
+charFunction("toast")
+#Toast has two bars, one in 3 and another in 3.5.
+charFunction("chocolatey")
+#Chocolatey is also generally favorable because it has all its flavors in between 3 and 3.75
+charFunction("dirty")
+#Dirty is a strange one as it has many flavors spread out from 2.5 to 3.5. Who thought dirt flavored chocolate would be good?
+charFunction("intense vinegar")
+#Intense vinegar has a rating of 2.5 which is strange considering that its a chocolate bar. 
+
+```
+5. Brainstorm two analyses you would like to perform with your teammate. Describe in plain language what comparisons are you making. Create suitable numerical and graphical summaries for your analyses. Describe the results.
+```{r}
+#for(i in unique(choco$Bean_Origin)){
+  #barplot(table(choco[choco$Bean_Origin == i, "Bean_Origin"], choco[choco$Bean_Origin == i, "Rating"] ), main = i)
+  #print(summary(choco[choco$Bean_Origin == i, "Rating"]))
+#}
+
+generate <- function(BO){
+  barplot(table(choco[!is.na(choco$Rating) & choco$Bean_Origin == BO, "Bean_Origin"], choco[!is.na(choco$Rating) & choco$Bean_Origin == BO, "Rating"] ), main = BO)
+  print(summary(choco[!is.na(choco$Rating) & choco$Bean_Origin == BO, "Rating"]))
+  
+}
+
+generate("Colombia")
+generate("U.S.A.")
+generate("Ghana")
+generate("Peru")
+generate("Vietnam")
+```
+We compared different bean origins based on rating. 
